@@ -3,7 +3,7 @@ version: "3.8"
 services:
   squid:
     build:
-      context: ./api
+      context: ./squid
     container_name: squid_proxy
     restart: always
     ports:
@@ -13,7 +13,7 @@ services:
     networks:
       - proxy_network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3128"]
+      test: ["CMD-SHELL", "curl -f http://localhost:3128 || exit 1"]
       interval: 20s
       retries: 3
 
@@ -28,7 +28,7 @@ services:
     networks:
       - proxy_network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000"]
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
       interval: 20s
       retries: 3
 
@@ -40,6 +40,7 @@ services:
     ports:
       - "5000:5000"
     environment:
+      # Sets the environment to production. Possible values: development, production, testing
       - FLASK_ENV=production
     networks:
       - proxy_network
@@ -60,7 +61,7 @@ services:
     restart: always
     ports:
       - "8081:80"
-    volumes:
+      - ./web_dashboard:/usr/share/nginx/html
       - ./web-dashboard:/usr/share/nginx/html
     networks:
       - proxy_network

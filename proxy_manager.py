@@ -4,10 +4,11 @@ import json
 import pandas as pd
 import matplotlib.pyplot as plt
 from flask import Flask, request, jsonify
-import uuid
+import logging
 from flask_cors import CORS
 from threading import Thread
 from kubernetes import client, config
+import uuid
 
 app = Flask(__name__)
 CORS(app)
@@ -22,7 +23,9 @@ def view_analytics():
             LOG_FILE,
             names=["CPU (%)", "Memory (%)", "Data Sent (MB)", "Data Received (MB)"],
         )
-        df = df.sample(frac=0.1)  # Downsample the data to 10%
+        downsample_frac = float(request.args.get("downsample", 0.1))
+        if downsample_frac < 1.0:
+            df = df.sample(frac=downsample_frac)  # Downsample the data
         plt.figure(figsize=(10, 5))
         plt.plot(df.index, df["CPU (%)"], label="CPU (%)")
         plt.plot(df.index, df["Memory (%)"], label="Memory (%)")
@@ -41,28 +44,35 @@ def view_analytics():
 @app.route("/autoscale", methods=["POST"])
 def auto_scale():
     data = request.get_json()
-    try:
-        num_instances = int(data.get("instances", 1))
-        if num_instances < 1:
-            raise ValueError("Number of instances must be a positive integer.")
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 400
+    instances = data.get("instances", "1")
+    if not instances.isdigit() or int(instances) < 1:
+        return jsonify(
+            {"error": "Number of instances must be a positive integer."}
+        ), 400
+    num_instances = int(instances)
 
     config.load_kube_config()
     v1 = client.CoreV1Api()
+    pod_manifests = []
     for _ in range(num_instances):
         pod_manifest = {
             "apiVersion": "v1",
-            "kind": "Pod",
-            "metadata": {"name": f"proxy-pod-{time.time()}"},
+            "metadata": {
+                "name": f"proxy-pod-{uuid.uuid4().hex[:8]}-{int(time.time())}"
+            },
             "spec": {"containers": [{"name": "proxy", "image": "squid"}]},
         }
+        pod_manifests.append(pod_manifest)
+
+    for pod_manifest in pod_manifests:
         v1.create_namespaced_pod(namespace="default", body=pod_manifest)
 
     return jsonify({"message": f"Deployed {num_instances} proxy instances."})
 
 
 if __name__ == "__main__":
-    debug_mode = os.getenv("FLASK_DEBUG", "False").lower() in ["true", "1"]
+    logging.basicConfig(level=logging.INFO)
+    logging.info("🚀 Starting Enterprise Proxy Manager v4.0...")
     print("🚀 Starting Enterprise Proxy Manager v4.0...")
+    debug_mode = True  # Set the debug mode to True or False as needed
     app.run(host="0.0.0.0", port=5000, debug=debug_mode)

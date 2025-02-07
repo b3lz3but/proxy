@@ -1,6 +1,40 @@
 {
-    "rotation_interval": 300,
-    "use_authentication": true,
-    "username": "proxyuser",
-    "password": "proxypass"
+  // Interval in seconds for rotating proxies
+  "rotation_interval": 300,
+
+  // Enable or disable authentication
+  "use_authentication": true,
+
+  // Username for authentication (use environment variable)
+  "username": "${PROXY_USERNAME}",
+
+  // Password for authentication (use environment variable)
+  "password": "${PROXY_PASSWORD}",
+
+  // Proxy server address
+  "proxy_server": "http://localhost:8080",
+
+  // Log level (e.g., debug, info, warn, error)
+  "log_level": "info",
+
+  // Enable or disable proxy caching
+  "enable_cache": false,
+
+  // Cache expiration time in seconds
+  "cache_expiration": 600,
+
+  // Maximum number of retries for proxy requests
+  "max_retries": 5,
+
+  // Timeout in seconds for proxy requests
+  "request_timeout": 30,
+
+  // Enable or disable detailed logging
+  "detailed_logging": false,
+
+  // Enable or disable SSL verification
+  "ssl_verification": true,
+
+  // Path to SSL certificate (use environment variable)
+  "ssl_certificate_path": "${SSL_CERT_PATH}"
 }

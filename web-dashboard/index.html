@@ -44,21 +44,31 @@
         }
     </style>
     <script>
+        let cachedProxies = null;
+
         async function fetchProxies() {
             const proxiesElement = document.getElementById("proxies");
             proxiesElement.innerHTML = '<div class="loading">Loading...</div>';
+            if (cachedProxies) {
+                proxiesElement.innerText = JSON.stringify(cachedProxies, null, 4);
+                return;
+            }
             try {
-                let response = await fetch("http://localhost:5000/api/v1/proxies");
+                const apiEndpoint = window.location.origin + "/api/v1/proxies";
+                let response = await fetch(apiEndpoint);
                 if (!response.ok) {
                     throw new Error('Network response was not ok ' + response.statusText);
                 }
-                let data = await response.json();
+                proxiesElement.innerHTML = JSON.stringify(data, null, 4);
+                cachedProxies = data;
                 proxiesElement.innerText = JSON.stringify(data, null, 4);
+                cachedProxies = data;
             } catch (error) {
                 proxiesElement.innerHTML = '<div class="error">Error: ' + error.message + '</div>';
             }
         }
     </script>
+    
 </head>
 <body>
     <h1>Enterprise Proxy Manager</h1>
