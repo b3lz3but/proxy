@@ -23,17 +23,4 @@ RUN apt-get update && apt-get install -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-CMD ["python3", "proxy_manager.py"]
-
-RUN pip install \
-    flask \
-    paramiko \
-    inquirer \
-    tabulate \
-    psutil \
-    flask_cors \
-    pandas \
-    matplotlib \
-    kubernetes
-
 CMD ["python", "proxy_manager.py"]
