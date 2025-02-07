@@ -1,0 +1,6 @@
+{
+    "rotation_interval": 300,
+    "use_authentication": true,
+    "username": "proxyuser",
+    "password": "proxypass"
+}

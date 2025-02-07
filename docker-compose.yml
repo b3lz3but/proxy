@@ -1,0 +1,59 @@
+version: "3.8"
+
+services:
+  squid:
+    build: .
+    container_name: squid_proxy
+    restart: always
+    ports:
+      - "3128:3128"
+    volumes:
+      - ./squid/squid.conf:/etc/squid/squid.conf
+    networks:
+      - proxy_network
+
+  haproxy:
+    image: haproxy:latest
+    container_name: haproxy_lb
+    restart: always
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg
+    networks:
+      - proxy_network
+
+  api:
+    build: .
+    container_name: proxy_api
+    restart: always
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=production
+    networks:
+      - proxy_network
+
+  monitoring:
+    build: .
+    container_name: monitoring_service
+    restart: always
+    ports:
+      - "6000:6000"
+    networks:
+      - proxy_network
+
+  web-dashboard:
+    image: nginx:latest
+    container_name: web_dashboard
+    restart: always
+    ports:
+      - "8081:80"
+    volumes:
+      - ./web-dashboard:/usr/share/nginx/html
+    networks:
+      - proxy_network
+
+networks:
+  proxy_network:
+    driver: bridge

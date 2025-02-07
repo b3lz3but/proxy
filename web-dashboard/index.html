@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Enterprise Proxy Manager</title>
+    <script>
+        async function fetchProxies() {
+            let response = await fetch("http://localhost:5000/list_proxies");
+            let data = await response.json();
+            document.getElementById("proxies").innerText = JSON.stringify(data, null, 4);
+        }
+    </script>
+</head>
+<body>
+    <h1>Enterprise Proxy Manager</h1>
+    <button onclick="fetchProxies()">View Active Proxies</button>
+    <pre id="proxies"></pre>
+</body>
+</html>
