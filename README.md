@@ -23,7 +23,7 @@ Enterprise Proxy Manager v4.0 is a **fully automated, scalable, and AI-powered p
 
 ### 📥 **1. Clone Repository**
 ```sh
-git clone https://github.com/your-repo/enterprise-proxy-manager.git
+git clone https://github.com/your-repo/proxy.git
 cd enterprise-proxy-manager
 ```
 
