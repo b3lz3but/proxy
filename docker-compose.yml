@@ -2,7 +2,8 @@ version: "3.8"
 
 services:
   squid:
-    build: .
+    build:
+      context: ./api
     container_name: squid_proxy
     restart: always
     ports:
@@ -11,6 +12,10 @@ services:
       - ./squid/squid.conf:/etc/squid/squid.conf
     networks:
       - proxy_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3128"]
+      interval: 20s
+      retries: 3
 
   haproxy:
     image: haproxy:latest
@@ -22,9 +27,14 @@ services:
       - ./haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg
     networks:
       - proxy_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000"]
+      interval: 20s
+      retries: 3
 
   api:
-    build: .
+    build:
+      context: ./api
     container_name: proxy_api
     restart: always
     ports:
@@ -35,7 +45,8 @@ services:
       - proxy_network
 
   monitoring:
-    build: .
+    build:
+      context: ./monitoring
     container_name: monitoring_service
     restart: always
     ports:

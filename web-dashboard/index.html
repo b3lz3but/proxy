@@ -1,12 +1,62 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Enterprise Proxy Manager</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f8f9fa;
+        }
+        h1 {
+            color: #333;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        pre {
+            background-color: #f4f4f4;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+            max-height: 400px;
+            margin-top: 20px;
+        }
+        .loading {
+            color: #007BFF;
+            font-size: 16px;
+        }
+        .error {
+            color: red;
+            font-size: 16px;
+        }
+    </style>
     <script>
         async function fetchProxies() {
-            let response = await fetch("http://localhost:5000/list_proxies");
-            let data = await response.json();
-            document.getElementById("proxies").innerText = JSON.stringify(data, null, 4);
+            const proxiesElement = document.getElementById("proxies");
+            proxiesElement.innerHTML = '<div class="loading">Loading...</div>';
+            try {
+                let response = await fetch("http://localhost:5000/api/v1/proxies");
+                if (!response.ok) {
+                    throw new Error('Network response was not ok ' + response.statusText);
+                }
+                let data = await response.json();
+                proxiesElement.innerText = JSON.stringify(data, null, 4);
+            } catch (error) {
+                proxiesElement.innerHTML = '<div class="error">Error: ' + error.message + '</div>';
+            }
         }
     </script>
 </head>
