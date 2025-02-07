@@ -1,19 +1,40 @@
 import os
 import time
-import json
+import uuid
+import logging
+
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+from kubernetes import client, config
+from functools import wraps
+
+# Import pandas and matplotlib
 import pandas as pd
 import matplotlib.pyplot as plt
-from flask import Flask, request, jsonify
-import logging
-from flask_cors import CORS
-from threading import Thread
-from kubernetes import client, config
-import uuid
 
 app = Flask(__name__)
 CORS(app)
-
 LOG_FILE = "logs/proxy_usage.log"
+
+# Configuration using environment variables
+KUBERNETES_NAMESPACE = os.environ.get("KUBERNETES_NAMESPACE", "default")
+PROXY_IMAGE = os.environ.get("PROXY_IMAGE", "squid")
+API_USERNAME = os.environ.get("API_USERNAME", "admin")
+API_PASSWORD = os.environ.get("API_PASSWORD", "password")
+
+
+# Authentication decorator
+def authenticate(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        auth = request.authorization
+        if not auth or not (
+            auth.username == API_USERNAME and auth.password == API_PASSWORD
+        ):
+            return jsonify({"error": "Authentication required"}), 401
+        return func(*args, **kwargs)
+
+    return wrapper
 
 
 @app.route("/analytics", methods=["GET"])
@@ -24,8 +45,7 @@ def view_analytics():
             names=["CPU (%)", "Memory (%)", "Data Sent (MB)", "Data Received (MB)"],
         )
         downsample_frac = float(request.args.get("downsample", 0.1))
-        if downsample_frac < 1.0:
-            df = df.sample(frac=downsample_frac)  # Downsample the data
+        df = df.sample(frac=downsample_frac)
         plt.figure(figsize=(10, 5))
         plt.plot(df.index, df["CPU (%)"], label="CPU (%)")
         plt.plot(df.index, df["Memory (%)"], label="Memory (%)")
@@ -42,7 +62,8 @@ def view_analytics():
 
 
 @app.route("/autoscale", methods=["POST"])
-def auto_scale():
+@authenticate  # Apply authentication to this endpoint
+def autoscale():
     data = request.get_json()
     instances = data.get("instances", "1")
     if not instances.isdigit() or int(instances) < 1:
@@ -50,9 +71,12 @@ def auto_scale():
             {"error": "Number of instances must be a positive integer."}
         ), 400
     num_instances = int(instances)
+    try:
+        config.load_kube_config()
+        v1 = client.CoreV1Api()
+    except config.ConfigException as e:
+        return jsonify({"error": f"Kubernetes configuration error: {str(e)}"}), 500
 
-    config.load_kube_config()
-    v1 = client.CoreV1Api()
     pod_manifests = []
     for _ in range(num_instances):
         pod_manifest = {
@@ -60,12 +84,18 @@ def auto_scale():
             "metadata": {
                 "name": f"proxy-pod-{uuid.uuid4().hex[:8]}-{int(time.time())}"
             },
-            "spec": {"containers": [{"name": "proxy", "image": "squid"}]},
+            "spec": {"containers": [{"name": "proxy", "image": PROXY_IMAGE}]},
         }
         pod_manifests.append(pod_manifest)
 
     for pod_manifest in pod_manifests:
-        v1.create_namespaced_pod(namespace="default", body=pod_manifest)
+        try:
+            v1.create_namespaced_pod(namespace=KUBERNETES_NAMESPACE, body=pod_manifest)
+        except client.rest.ApiException as e:
+            if e.status == 409:
+                return jsonify({"error": f"Pod already exists: {e.reason}"}), 409
+            else:
+                return jsonify({"error": f"Failed to create pod: {e.reason}"}), 500
 
     return jsonify({"message": f"Deployed {num_instances} proxy instances."})
 
@@ -74,5 +104,5 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     logging.info("🚀 Starting Enterprise Proxy Manager v4.0...")
     print("🚀 Starting Enterprise Proxy Manager v4.0...")
-    debug_mode = True  # Set the debug mode to True or False as needed
+    debug_mode = True
     app.run(host="0.0.0.0", port=5000, debug=debug_mode)

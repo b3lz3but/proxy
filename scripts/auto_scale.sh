@@ -19,7 +19,7 @@ error_message() {
 
 validate_response() {
     local response=$1
-    if [[ "$response" =~ ^[0-9]{3}$ ]]; then
+    if [[ "$response" =~ ^{3}$ ]]; then
         return 0
     else
         return 1
@@ -29,19 +29,19 @@ validate_response() {
 parse_response() {
     local response_body=$1
     if command -v jq &> /dev/null; then
-        echo "$response_body" | jq .
+        echo "$response_body" | jq.
     else
         echo "$response_body"
     fi
 }
 
 check_dependencies() {
-    if ! command -v curl &> /dev/null; then
+    if! command -v curl &> /dev/null; then
         error_message "curl is not installed. Please install curl to use this script."
         exit 1
     fi
 
-    if ! command -v jq &> /dev/null; then
+    if! command -v jq &> /dev/null; then
         log_message "jq is not installed. JSON responses will not be parsed."
     fi
 }
@@ -53,19 +53,39 @@ auto_scale() {
     local response_body
 
     while [ $attempt -lt $RETRIES ]; do
-        response_body=$(curl -s -w "%{http_code}" -X POST "$API_URL" -H "Content-Type: application/json" -d "$DATA")
+        response_body=$(
+            curl -s -w "%{http_code}" -u admin:password -X POST "$API_URL" \
+            -H "Content-Type: application/json" -d "$DATA"
+        )
         response="${response_body: -3}"
         response_body="${response_body::-3}"
-        
+
         if validate_response "$response"; then
-            if [ "$response" -eq 200 ]; then
+            case "$response" in
+            200)
                 log_message "Auto-scaling request successful."
                 parse_response "$response_body"
                 return 0
-            else
+              ;;
+            400)
+                error_message "Bad request: $response"
+                parse_response "$response_body"
+                return 1
+              ;;
+            401)
+                error_message "Unauthorized: $response"
+                parse_response "$response_body"
+                return 1
+              ;;
+            500)
+                error_message "Internal server error: $response"
+                parse_response "$response_body"
+              ;;
+            *)
                 error_message "Auto-scaling request failed with status code: $response"
                 parse_response "$response_body"
-            fi
+              ;;
+            esac
         else
             error_message "Invalid response received: $response"
         fi

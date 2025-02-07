@@ -18,14 +18,13 @@ error_message() {
 create_or_clear_log_file() {
     if [ -f "$LOG_FILE" ]; then
         # Clear the contents of the log file
-        if : > "$LOG_FILE"; then
+        if: > "$LOG_FILE"; then
             log_message "Log file cleared: $LOG_FILE"
         else
             error_message "Failed to clear log file: $LOG_FILE"
             exit 1
         fi
     else
-        # Create the log file if it does not exist
         # Create the log file if it does not exist
         if touch "$LOG_FILE"; then
             log_message "Log file created: $LOG_FILE"
@@ -39,7 +38,7 @@ create_or_clear_log_file() {
 log_message "Cleaning logs..."
 
 # Check if the logs directory exists
-if [ ! -d "$LOG_DIR" ]; then
+if [! -d "$LOG_DIR" ]; then
     if mkdir -p "$LOG_DIR"; then
         log_message "Log directory created: $LOG_DIR"
     else

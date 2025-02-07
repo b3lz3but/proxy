@@ -34,41 +34,46 @@
             max-height: 400px;
             margin-top: 20px;
         }
-        .loading {
+      .loading {
             color: #007BFF;
             font-size: 16px;
         }
-        .error {
+      .error {
             color: red;
             font-size: 16px;
         }
     </style>
     <script>
         let cachedProxies = null;
+        const cacheExpiration = 60 * 1000; // 1 minute
 
         async function fetchProxies() {
             const proxiesElement = document.getElementById("proxies");
             proxiesElement.innerHTML = '<div class="loading">Loading...</div>';
-            if (cachedProxies) {
-                proxiesElement.innerText = JSON.stringify(cachedProxies, null, 4);
+
+            // Check if cache is valid
+            if (cachedProxies && (Date.now() - cachedProxies.timestamp) < cacheExpiration) {
+                proxiesElement.innerText = JSON.stringify(cachedProxies.data, null, 4);
                 return;
             }
+
             try {
                 const apiEndpoint = window.location.origin + "/api/v1/proxies";
                 let response = await fetch(apiEndpoint);
                 if (!response.ok) {
                     throw new Error('Network response was not ok ' + response.statusText);
                 }
-                proxiesElement.innerHTML = JSON.stringify(data, null, 4);
-                cachedProxies = data;
+                let data = await response.json();
+                cachedProxies = {
+                    data: data,
+                    timestamp: Date.now()
+                };
                 proxiesElement.innerText = JSON.stringify(data, null, 4);
-                cachedProxies = data;
             } catch (error) {
                 proxiesElement.innerHTML = '<div class="error">Error: ' + error.message + '</div>';
             }
         }
     </script>
-    
 </head>
 <body>
     <h1>Enterprise Proxy Manager</h1>
